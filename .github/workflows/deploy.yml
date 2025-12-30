@@ -10,8 +10,8 @@ on:
     #- cron: '0 17 * * *'   # 北京时间 01:00
     # 早间任务：北京时间每天 05:00（UTC 前一天 21:00）
     #- cron: '0 21 * * *'
-    # 午间任务：北京时间每天 11:40（UTC 03:40）
-    - cron: '40 3 * * *'
+    # 午间任务：北京时间每天 12:40（UTC 04:40）
+    - cron: '40 4 * * *'
     # 晚间任务：北京时间每天 20:30（UTC 14:00）
     #- cron: '30 12 * * *'
   workflow_dispatch:  # 手动触发
@@ -22,7 +22,6 @@ jobs:
     environment: AutoRead  # 指定环境
 
     steps:
-
     - name: Set DNS to Google's DNS
       run: |
         echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
@@ -42,13 +41,15 @@ jobs:
         pip install certifi==2024.8.30 charset-normalizer==3.4.0 idna==3.10 requests==2.32.3 urllib3==2.2.3
 
     - name: Run deployment script (with retry)
-      uses: HarryVasanth/rerun-action@v1  # 重试Action
+      uses: softprops/action-retry@v1  # 替换失效Action，社区活跃维护
       with:
-        command: python main.py  # 原有执行命令
-        max_attempts: 5          # 最大重试次数（1次原始+2次重试）
-        retry_wait_seconds: 500  # 重试间隔5分钟（300秒）
+        command: python main.py  # 原有执行命令不变
+        attempts: 5              # 最大重试次数（1次初始+4次重试，按你的配置保留5次）
+        delay: 300000            # 重试间隔5分钟（300秒=300000毫秒，修正原注释与参数不一致问题）
+        # 若确实需要500秒间隔，改为：delay: 500000，注释改为“重试间隔500秒”
+        retry_on: error          # 仅命令执行错误时重试（可选，增强稳定性）
       env:
-        # 保留原有所有环境变量
+        # 保留所有原有环境变量
         WXREAD_CURL_BASH: ${{ secrets.WXREAD_CURL_BASH }}
         PUSH_METHOD: ${{ secrets.PUSH_METHOD }}
         PUSHPLUS_TOKEN: ${{ secrets.PUSHPLUS_TOKEN }}
